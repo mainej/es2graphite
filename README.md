@@ -36,8 +36,9 @@ each server.
 usage: es2graphite.py [-h] [-p PREFIX] [-g GRAPHITE_HOST] [-o GRAPHITE_PORT]
                       [-i INTERVAL] [-l LOG_FILE]
                       [--health-level {cluster,indices,shards}]
+                      [--stats-level {none,cluster,indices,shards}]
                       [--log-level {info,warn,error,debug}]
-                      [--protocol {plaintext,pickle}] [--stdout]
+                      [--protocol {plaintext,pickle}] [-s] [--stdout]
                       [--shard-stats] [--segments] [-d] [-v]
                       ES_HOST [ES_HOST ...]
 
@@ -60,10 +61,15 @@ optional arguments:
                         full path to the log file. Default: ./es2graphite.log
   --health-level {cluster,indices,shards}
                         The level of health metrics. Default: indices
+  --stats-level {none,cluster,indices,shards}
+                        The level of stats metrics. Default: same as --health-
+                        level
   --log-level {info,warn,error,debug}
                         The logging level. Default: warn
   --protocol {plaintext,pickle}
                         The graphite submission protocol. Default: pickle
+  -s, --silent          Silence metric printing to logs or stdout. Default:
+                        False
   --stdout              output logging to stdout. Default: False
   --shard-stats         Collect shard level stats metrics. Default: False
   --segments            Collect low-level segment metrics. Default: False

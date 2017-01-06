@@ -145,7 +145,7 @@ def process_indices_status(prefix, status):
 def process_indices_stats(prefix, stats):
     metrics = []
     process_section(int(time.time()), metrics, prefix, (CLUSTER_NAME, 'indices', '_all'), stats['_all'])
-    if args.health_level != 'cluster':
+    if args.stats_level != 'cluster':
         process_section(int(time.time()), metrics, prefix, (CLUSTER_NAME, 'indices'), stats['indices'])
     return metrics
     
@@ -265,16 +265,13 @@ def get_metrics():
     thread_pool_metrics = process_thread_pool(args.prefix, thread_pool, cluster_health['cluster_name'])
     submit_to_graphite(thread_pool_metrics)
 
-    indices_stats_url = 'http://%s/_stats?all=true' % get_es_host()
-    if args.shard_stats:
-        indices_stats_url = '%s&level=shards' % indices_stats_url
-    elif args.health_level == 'cluster':
-        indices_stats_url = '%s&level=cluster' % indices_stats_url
-    log('%s: GET %s' % (dt, indices_stats_url))
-    indices_stats_data = urllib2.urlopen(indices_stats_url).read()
-    indices_stats = json.loads(indices_stats_data)
-    indices_stats_metrics = process_indices_stats(args.prefix, indices_stats)
-    submit_to_graphite(indices_stats_metrics)
+    if args.stats_level != 'none':
+        indices_stats_url = 'http://%s/_stats?all=true&level=%s' % (get_es_host(), args.stats_level)
+        log('%s: GET %s' % (dt, indices_stats_url))
+        indices_stats_data = urllib2.urlopen(indices_stats_url).read()
+        indices_stats = json.loads(indices_stats_data)
+        indices_stats_metrics = process_indices_stats(args.prefix, indices_stats)
+        submit_to_graphite(indices_stats_metrics)
    
     if args.segments:
         segments_status_url = 'http://%s/_segments' % get_es_host()
@@ -292,6 +289,7 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--interval', default=60, type=int, help='interval in seconds. Default: %(default)s')
     parser.add_argument('-l', '--log-file', default='./es2graphite.log', type=str, help='full path to the log file. Default: %(default)s')
     parser.add_argument('--health-level', choices=['cluster', 'indices', 'shards'], default='indices', help='The level of health metrics. Default: %(default)s')
+    parser.add_argument('--stats-level', choices=['none', 'cluster', 'indices', 'shards'], help='The level of stats metrics. Default: same as --health-level')
     parser.add_argument('--log-level', choices=['info', 'warn', 'error', 'debug'], default='warn', help='The logging level. Default: %(default)s')
     parser.add_argument('--protocol', choices=['plaintext', 'pickle'], default='pickle', help='The graphite submission protocol. Default: %(default)s')
     parser.add_argument('-s', '--silent', action='store_true', help='Silence metric printing to logs or stdout. Default: %(default)s')
@@ -302,6 +300,10 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output. Default: %(default)s')
     parser.add_argument('es', nargs='+', help='elasticsearch host:port', metavar='ES_HOST')
     args = parser.parse_args()
+    if args.stats_level is None:
+        args.stats_level = args.health_level
+    if args.shard_stats:
+        args.stats_level = 'shards'
 
 
     root_logger = logging.getLogger()
